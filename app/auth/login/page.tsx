@@ -26,23 +26,23 @@ export default function LoginPage() {
     if (!email.trim()) {
       return { valid: false, message: "L'email est requis" };
     }
-    
+
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return { valid: false, message: "Format d'email invalide" };
     }
-    
+
     if (!password) {
       return { valid: false, message: "Le mot de passe est requis" };
     }
-    
+
     return { valid: true };
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
+
     // Validate form
     const validation = validateForm();
     if (!validation.valid) {
@@ -53,13 +53,13 @@ export default function LoginPage() {
       })
       return;
     }
-    
+
     setIsLoading(true)
 
     try {
       console.log('Attempting login with:', { email, password });
       const response = await login(email, password)
-      
+
       toast({
         title: "Connexion réussie",
         description: `Bienvenue, ${response.user.username} !`,
@@ -69,17 +69,17 @@ export default function LoginPage() {
       router.push("/auctions")
     } catch (error: any) {
       console.error("Login error:", error);
-      
+
       // More detailed error handling
       let errorMessage = "Veuillez vérifier vos identifiants et réessayer.";
-      
+
       if (error.response) {
         console.log('Error response:', error.response);
         // The request was made and the server responded with a status code
         // that falls out of the range of 2xx
-        errorMessage = error.response.data?.message || 
-                      error.response.data?.error || 
-                      `Erreur ${error.response.status}: ${error.response.statusText}`;
+        errorMessage = error.response.data?.message ||
+          error.response.data?.error ||
+          `Erreur ${error.response.status}: ${error.response.statusText}`;
       } else if (error.request) {
         // The request was made but no response was received
         errorMessage = "Aucune réponse du serveur. Veuillez vérifier votre connexion.";
@@ -87,7 +87,7 @@ export default function LoginPage() {
         // Something happened in setting up the request that triggered an Error
         errorMessage = error.message || "Une erreur s'est produite lors de la connexion.";
       }
-      
+
       toast({
         title: "Échec de la connexion",
         description: errorMessage,

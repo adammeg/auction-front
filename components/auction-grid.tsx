@@ -144,7 +144,7 @@ export default function AuctionGrid({
                   <div>
                     <p className="text-xs text-muted-foreground">Enchère actuelle</p>
                     <p className="text-lg font-bold">
-                      {getPrice(auction).toLocaleString('fr-FR')} €
+                      {getPrice(auction).toLocaleString('fr-FR')} DT
                     </p>
                   </div>
                   <Link href={`/auctions/${auction._id}`}>
@@ -203,7 +203,7 @@ export default function AuctionGrid({
               <div>
                 <p className="text-sm font-medium">Enchère actuelle</p>
                 <p className="text-lg font-bold">
-                  {getPrice(auction).toLocaleString('fr-FR')} €
+                  {getPrice(auction).toLocaleString('fr-FR')} DT
                 </p>
               </div>
               <div className="text-left sm:text-right">

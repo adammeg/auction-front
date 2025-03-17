@@ -31,7 +31,7 @@ export default function CreateAuctionPage() {
     startingBid: '',
     reservePrice: '',
     auctionDuration: '7',
-    minBid: '1',
+    minBid: '',
     shippingOptions: {
       domestic: false,
       international: false,
@@ -322,7 +322,6 @@ export default function CreateAuctionPage() {
                     onChange={handleChange}
                     type="number"
                     min="1"
-                    step="0.01"
                     required
                   />
                   <p className="text-xs text-muted-foreground">
@@ -339,7 +338,6 @@ export default function CreateAuctionPage() {
                     onChange={handleChange}
                     type="number"
                     min="0"
-                    step="0.01"
                   />
                   <p className="text-xs text-muted-foreground">
                     Prix minimum que vous êtes prêt à accepter. Laissez vide s'il n'y a pas de prix de réserve.
@@ -376,7 +374,7 @@ export default function CreateAuctionPage() {
                     type="number"
                     min="1"
                     placeholder="Ex: 5"
-                    value={formData.minBid || 1}
+                    value={formData.minBid }
                     onChange={handleChange}
                     required
                   />

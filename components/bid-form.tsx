@@ -55,7 +55,7 @@ export default function BidForm({ currentBid, minIncrement, auctionId, onBidPlac
     if (bidAmount < currentBid + minIncrement) {
       toast({
         title: "Montant d'enchère invalide",
-        description: `Votre enchère doit être d'au moins ${currentBid + minIncrement} €`,
+        description: `Votre enchère doit être d'au moins ${currentBid + minIncrement} DT`,
         variant: "destructive",
       })
       return
@@ -73,7 +73,7 @@ export default function BidForm({ currentBid, minIncrement, auctionId, onBidPlac
       
       toast({
         title: "Enchère placée avec succès !",
-        description: `Vous avez placé une enchère de ${bidAmount} € sur cet article.`,
+        description: `Vous avez placé une enchère de ${bidAmount} DT sur cet article.`,
       })
 
       // Refresh the data or call the callback
@@ -111,7 +111,7 @@ export default function BidForm({ currentBid, minIncrement, auctionId, onBidPlac
       <form onSubmit={handleSubmit}>
         <div className="flex gap-2">
           <div className="relative flex-1">
-            <span className="absolute inset-y-0 left-3 flex items-center text-muted-foreground">€</span>
+            <span className="absolute inset-y-0 left-3 flex items-center text-muted-foreground">DT</span>
             <Input
               type="number"
               value={bidAmount}
@@ -130,18 +130,18 @@ export default function BidForm({ currentBid, minIncrement, auctionId, onBidPlac
           <DialogHeader>
             <DialogTitle>Confirmer votre enchère</DialogTitle>
             <DialogDescription>
-              Vous êtes sur le point de placer une enchère de {bidAmount} € sur cet article. Cette action ne peut pas
+              Vous êtes sur le point de placer une enchère de {bidAmount} DT sur cet article. Cette action ne peut pas
               être annulée.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-4">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Enchère actuelle :</span>
-              <span className="font-medium">{currentBid} €</span>
+              <span className="font-medium">{currentBid} DT</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Votre enchère :</span>
-              <span className="font-medium">{bidAmount} €</span>
+              <span className="font-medium">{bidAmount} DT</span>
             </div>
             {user && (
               <div className="flex justify-between">

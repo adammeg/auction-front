@@ -164,7 +164,7 @@ export default function FeaturedAuctions() {
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                 <div>
                   <p className="text-sm font-medium">Enchère actuelle</p>
-                  <p className="text-lg font-bold">{auction.currentBid} €</p>
+                  <p className="text-lg font-bold">{auction.currentBid} DT</p>
                 </div>
                 <div className="text-left sm:text-right">
                   <p className="text-sm font-medium">{auction.bids} enchères</p>
