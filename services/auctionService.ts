@@ -234,7 +234,7 @@ export const getUserDashboardStats = async (): Promise<any> => {
 export const getUserBids = async (): Promise<any> => {
   console.log('Fetching user bids');
   try {
-    const response = await api.get('/bids/user');
+    const response = await api.get('/bids/my-bids'); // Changed from '/bids/user' to '/bids/my-bids'
     console.log('User bids response:', response.data);
     
     // Handle different response formats
@@ -251,4 +251,4 @@ export const getUserBids = async (): Promise<any> => {
     console.error('Error fetching user bids:', error);
     throw error;
   }
-}; 
+};

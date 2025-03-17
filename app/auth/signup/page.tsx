@@ -101,6 +101,12 @@ export default function SignupPage() {
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Créer un compte</h1>
           <p className="text-sm text-muted-foreground">Entrez vos informations pour créer votre compte EnchèrePro</p>
+          <p className="px-8 text-center text-sm text-muted-foreground">
+          Vous avez déjà un compte ?{" "}
+          <Link href="/auth/login" className="hover:text-primary underline underline-offset-4">
+            Se connecter
+          </Link>
+        </p>
         </div>
 
         <div className="grid gap-6">
@@ -235,13 +241,6 @@ export default function SignupPage() {
             </Button>
           </div>
         </div>
-
-        <p className="px-8 text-center text-sm text-muted-foreground">
-          Vous avez déjà un compte ?{" "}
-          <Link href="/auth/login" className="hover:text-primary underline underline-offset-4">
-            Se connecter
-          </Link>
-        </p>
       </div>
     </div>
   )

@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -42,9 +41,8 @@ export default function CreateAuctionPage() {
       paypal: true,
       bank: false
     },
-    returnPolicy: ''
   })
-  
+
   const router = useRouter()
   const { toast } = useToast()
 
@@ -94,11 +92,11 @@ export default function CreateAuctionPage() {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files)
-      
+
       // Limit to 5 images total
       const totalFiles = [...images, ...newFiles].slice(0, 5)
       setImages(totalFiles)
-      
+
       // Create preview URLs
       const newPreviews = totalFiles.map(file => URL.createObjectURL(file))
       setImagePreview(newPreviews)
@@ -109,7 +107,7 @@ export default function CreateAuctionPage() {
     const newImages = [...images]
     newImages.splice(index, 1)
     setImages(newImages)
-    
+
     // Update previews
     const newPreviews = [...imagePreview]
     URL.revokeObjectURL(newPreviews[index]) // Clean up the URL
@@ -124,7 +122,7 @@ export default function CreateAuctionPage() {
     try {
       // Create FormData object for file upload
       const auctionFormData = new FormData()
-      
+
       // Add all form fields
       Object.entries(formData).forEach(([key, value]) => {
         if (typeof value === 'object') {
@@ -133,7 +131,7 @@ export default function CreateAuctionPage() {
           auctionFormData.append(key, value)
         }
       })
-      
+
       // Add images
       images.forEach(image => {
         auctionFormData.append('images', image)
@@ -141,7 +139,7 @@ export default function CreateAuctionPage() {
 
       // Send to API
       const response = await createAuction(auctionFormData)
-      
+
       toast({
         title: "Enchère créée avec succès",
         description: "Votre article a été mis en vente.",
@@ -185,13 +183,13 @@ export default function CreateAuctionPage() {
               <CardContent className="space-y-6">
                 <div className="grid gap-3">
                   <Label htmlFor="title">Titre</Label>
-                  <Input 
-                    id="title" 
+                  <Input
+                    id="title"
                     name="title"
                     value={formData.title}
                     onChange={handleChange}
-                    placeholder="ex: Montre Mécanique Vintage" 
-                    required 
+                    placeholder="ex: Montre Mécanique Vintage"
+                    required
                   />
                   <p className="text-xs text-muted-foreground">
                     Soyez précis et incluez des détails clés que les acheteurs pourraient rechercher
@@ -200,8 +198,8 @@ export default function CreateAuctionPage() {
 
                 <div className="grid gap-3">
                   <Label htmlFor="category">Catégorie</Label>
-                  <Select 
-                    value={formData.category} 
+                  <Select
+                    value={formData.category}
                     onValueChange={(value) => handleSelectChange('category', value)}
                     required
                   >
@@ -236,8 +234,8 @@ export default function CreateAuctionPage() {
 
                 <div className="grid gap-3">
                   <Label>État de l'Article</Label>
-                  <Select 
-                    value={formData.condition} 
+                  <Select
+                    value={formData.condition}
                     onValueChange={(value) => handleSelectChange('condition', value)}
                     required
                   >
@@ -307,16 +305,16 @@ export default function CreateAuctionPage() {
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid gap-3">
-                  <Label htmlFor="startingBid">Prix de Départ (€)</Label>
-                  <Input 
-                    id="startingBid" 
+                  <Label htmlFor="startingBid">Prix de Départ (DT)</Label>
+                  <Input
+                    id="startingBid"
                     name="startingBid"
                     value={formData.startingBid}
                     onChange={handleChange}
-                    type="number" 
-                    min="1" 
-                    step="0.01" 
-                    required 
+                    type="number"
+                    min="1"
+                    step="0.01"
+                    required
                   />
                   <p className="text-xs text-muted-foreground">
                     Le prix minimum auquel les enchères commenceront
@@ -324,15 +322,15 @@ export default function CreateAuctionPage() {
                 </div>
 
                 <div className="grid gap-3">
-                  <Label htmlFor="reservePrice">Prix de Réserve (€) (Optionnel)</Label>
-                  <Input 
-                    id="reservePrice" 
+                  <Label htmlFor="reservePrice">Prix de Réserve (DT) (Optionnel)</Label>
+                  <Input
+                    id="reservePrice"
                     name="reservePrice"
                     value={formData.reservePrice}
                     onChange={handleChange}
-                    type="number" 
-                    min="0" 
-                    step="0.01" 
+                    type="number"
+                    min="0"
+                    step="0.01"
                   />
                   <p className="text-xs text-muted-foreground">
                     Prix minimum que vous êtes prêt à accepter. Laissez vide s'il n'y a pas de prix de réserve.
@@ -341,8 +339,8 @@ export default function CreateAuctionPage() {
 
                 <div className="grid gap-3">
                   <Label htmlFor="duration">Durée de l'Enchère</Label>
-                  <Select 
-                    value={formData.duration} 
+                  <Select
+                    value={formData.duration}
                     onValueChange={(value) => handleSelectChange('duration', value)}
                     required
                   >
@@ -362,111 +360,6 @@ export default function CreateAuctionPage() {
                   <p className="text-xs text-muted-foreground">
                     Durée pendant laquelle votre enchère sera active
                   </p>
-                </div>
-
-                <div className="grid gap-3">
-                  <Label>Options d'Expédition</Label>
-                  <div className="grid gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="shipping-domestic" 
-                        checked={formData.shippingOptions.domestic}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('shippingOptions', 'domestic', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="shipping-domestic" className="font-normal">
-                        Expédition Nationale
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="shipping-international"
-                        checked={formData.shippingOptions.international}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('shippingOptions', 'international', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="shipping-international" className="font-normal">
-                        Expédition Internationale
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="shipping-local"
-                        checked={formData.shippingOptions.local}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('shippingOptions', 'local', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="shipping-local" className="font-normal">
-                        Retrait sur Place
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
-                  <Label>Méthodes de Paiement</Label>
-                  <div className="grid gap-2">
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="payment-card" 
-                        defaultChecked
-                        checked={formData.paymentMethods.card}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('paymentMethods', 'card', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="payment-card" className="font-normal">
-                        Carte de Crédit/Débit
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="payment-paypal" 
-                        defaultChecked
-                        checked={formData.paymentMethods.paypal}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('paymentMethods', 'paypal', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="payment-paypal" className="font-normal">
-                        PayPal
-                      </Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox 
-                        id="payment-bank"
-                        checked={formData.paymentMethods.bank}
-                        onCheckedChange={(checked) => 
-                          handleCheckboxChange('paymentMethods', 'bank', checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="payment-bank" className="font-normal">
-                        Virement Bancaire
-                      </Label>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
-                  <Label>Politique de Retour</Label>
-                  <Select 
-                    value={formData.returnPolicy} 
-                    onValueChange={(value) => handleSelectChange('returnPolicy', value)}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Sélectionnez la politique de retour" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="no-returns">Pas de Retours Acceptés</SelectItem>
-                      <SelectItem value="7-days">Retours Acceptés Sous 7 Jours</SelectItem>
-                      <SelectItem value="14-days">Retours Acceptés Sous 14 Jours</SelectItem>
-                      <SelectItem value="30-days">Retours Acceptés Sous 30 Jours</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
               </CardContent>
             </Card>

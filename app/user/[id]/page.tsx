@@ -4,34 +4,39 @@ import { useState, useEffect } from "react"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
-import { ArrowLeft, Star, Clock, Package, Calendar, MapPin, Mail, ExternalLink, CalendarDays, Award } from "lucide-react"
+import { ArrowLeft, Star, Clock, Package, CalendarDays, Award } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import AuctionGrid from "@/components/auction-grid"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Separator } from "@/components/ui/separator"
+import ErrorDisplay from "@/components/error-display"
+import LoadingSpinner from "@/components/loading-spinner"
 
 import { getUserById, getUserListingsById, getUserStats } from "@/services/userService"
-import { format } from "date-fns"
-import { fr } from "date-fns/locale"
+import { normalizeResponse } from "@/lib/apiUtils"
+import { formatDateSafe } from "@/lib/dateUtils"
+import { getSafeImageUrl } from "@/lib/imageUtils"
+import { Auction } from "@/types/auction"
 
 export default function UserProfilePage() {
   const params = useParams()
   const router = useRouter()
-  const userId = params.id as string
+  const userId = params?.id as string
   
   const [user, setUser] = useState<any>(null)
-  const [userListings, setUserListings] = useState<any[]>([])
-  const [userSold, setUserSold] = useState<any[]>([])
+  const [userListings, setUserListings] = useState<Auction[]>([])
+  const [userSold, setUserSold] = useState<Auction[]>([])
   const [stats, setStats] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
   useEffect(() => {
     const fetchUserData = async () => {
+      if (!userId) return
+      
       try {
         setLoading(true)
         setError(null)
@@ -39,12 +44,14 @@ export default function UserProfilePage() {
         // Fetch user details
         const userData = await getUserById(userId)
         if (!userData) {
-          throw new Error("User not found")
+          throw new Error("Utilisateur introuvable")
         }
         setUser(userData)
         
         // Fetch user listings
-        const listingsData = await getUserListingsById(userId)
+        let listingsData = await getUserListingsById(userId)
+        listingsData = normalizeResponse<Auction>(listingsData)
+        
         if (Array.isArray(listingsData)) {
           // Split active and sold listings
           const active = listingsData.filter(listing => listing.status === 'active')
@@ -60,7 +67,7 @@ export default function UserProfilePage() {
         
       } catch (err) {
         console.error("Error fetching user data:", err)
-        setError(err instanceof Error ? err.message : "Failed to load user information")
+        setError(err instanceof Error ? err.message : "Impossible de charger les informations de l'utilisateur")
       } finally {
         setLoading(false)
       }
@@ -74,9 +81,7 @@ export default function UserProfilePage() {
   if (loading) {
     return (
       <div className="container py-12 px-4 md:px-6">
-        <div className="flex justify-center items-center min-h-[60vh]">
-          <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto"></div>
-        </div>
+        <LoadingSpinner text="Chargement du profil utilisateur..." />
       </div>
     )
   }
@@ -84,11 +89,10 @@ export default function UserProfilePage() {
   if (error) {
     return (
       <div className="container py-12 px-4 md:px-6">
-        <div className="text-center py-12">
-          <h2 className="text-2xl font-bold mb-2">Erreur</h2>
-          <p className="text-muted-foreground mb-6">{error}</p>
-          <Button onClick={() => router.back()}>Retour</Button>
-        </div>
+        <ErrorDisplay 
+          message={error} 
+          onRetry={() => window.location.reload()}
+        />
       </div>
     )
   }
@@ -108,13 +112,24 @@ export default function UserProfilePage() {
   return (
     <div className="container py-12 px-4 md:px-6">
       <div className="flex flex-col gap-8">
+        {/* Back button */}
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="w-fit"
+          onClick={() => router.back()}
+        >
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Retour
+        </Button>
+        
         <div className="flex flex-col lg:flex-row gap-8">
           {/* User Profile Card */}
           <Card className="flex-1">
             <CardHeader className="pb-2">
               <div className="flex flex-col sm:flex-row gap-4 sm:items-center">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src={user.avatar || ""} alt={user.username} />
+                  <AvatarImage src={user.avatar ? getSafeImageUrl(user.avatar) : ""} alt={user.username} />
                   <AvatarFallback className="text-2xl">
                     {user.username?.charAt(0).toUpperCase() || "U"}
                   </AvatarFallback>
@@ -124,7 +139,7 @@ export default function UserProfilePage() {
                   <CardDescription className="flex items-center gap-1">
                     <CalendarDays className="h-3 w-3" />
                     Membre depuis {user.createdAt 
-                      ? format(new Date(user.createdAt), 'MMMM yyyy', { locale: fr })
+                      ? formatDateSafe(user.createdAt, 'MMMM yyyy')
                       : "récemment"}
                   </CardDescription>
                 </div>

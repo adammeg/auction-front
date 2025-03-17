@@ -36,12 +36,12 @@ export default function AuctionDetailPage() {
         console.log('Auction details:', data)
         
         // Format the data
-        const auctionData = data.data || data
+        const auctionData = data || data
         setAuction(auctionData)
         
         // Check if auction is in favorites
         const favorites = JSON.parse(localStorage.getItem('favorites') || '[]')
-        setIsFavorite(favorites.includes(auctionData._id))
+        setIsFavorite(favorites.includes(auctionData?._id))
       } catch (error: any) {
         console.error('Failed to load auction:', error)
         setError(error.message || 'Failed to load auction details')
@@ -88,7 +88,7 @@ export default function AuctionDetailPage() {
     // Refresh auction data after a bid is placed
     try {
       const data = await getAuctionById(params.id as string)
-      setAuction(data.data || data)
+      setAuction(data || data)
     } catch (error) {
       console.error('Failed to refresh auction data:', error)
     }

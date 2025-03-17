@@ -1,9 +1,12 @@
 import api from '@/lib/api';
+import { normalizeResponse } from '@/lib/apiUtils';
+import { getSafeImageUrl } from '@/lib/imageUtils';
 
 export interface Category {
   _id: string;
   name: string;
   description?: string;
+  image?: string;
   parent?: string;
   slug?: string;
   count?: number;
@@ -16,13 +19,7 @@ export const getCategories = async (): Promise<Category[]> => {
     const response = await api.get('/categories/all');
     console.log('Categories response:', response.data);
     
-    // Check if the response has a data property
-    if (response.data && response.data.data) {
-      return response.data.data;
-    }
-    
-    // If not, return the response data directly (assuming it's the array)
-    return response.data;
+    return normalizeResponse<Category>(response.data);
   } catch (error) {
     console.error('Error fetching categories:', error);
     return [];
@@ -30,11 +27,12 @@ export const getCategories = async (): Promise<Category[]> => {
 };
 
 // Get category by ID
-export const getCategoryById = async (id: string): Promise<Category> => {
+export const getCategoryById = async (id: string): Promise<Category | null> => {
   try {
     const response = await api.get(`/categories/${id}`);
+    console.log('Category details response:', response.data);
     
-    // Check if the response has a data property
+    // Handle different response formats
     if (response.data && response.data.data) {
       return response.data.data;
     }
@@ -42,6 +40,32 @@ export const getCategoryById = async (id: string): Promise<Category> => {
     return response.data;
   } catch (error) {
     console.error(`Error fetching category ${id}:`, error);
-    throw error;
+    return null;
+  }
+};
+
+// Get all auctions in a category
+export const getAuctionsByCategory = async (categoryId: string): Promise<any[]> => {
+  try {
+    const response = await api.get(`/items/category/${categoryId}`);
+    console.log('Category auctions response:', response.data);
+    
+    return normalizeResponse(response.data);
+  } catch (error) {
+    console.error(`Error fetching auctions for category ${categoryId}:`, error);
+    return [];
+  }
+};
+
+// Get featured categories (those with most auctions)
+export const getFeaturedCategories = async (limit: number = 6): Promise<Category[]> => {
+  try {
+    const response = await api.get(`/categories/featured?limit=${limit}`);
+    console.log('Featured categories response:', response.data);
+    
+    return normalizeResponse<Category>(response.data);
+  } catch (error) {
+    console.error('Error fetching featured categories:', error);
+    return [];
   }
 };

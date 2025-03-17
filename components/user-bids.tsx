@@ -3,194 +3,142 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Clock, ArrowUpRight } from "lucide-react"
-
-import { Button } from "@/components/ui/button"
+import { Clock, ArrowRight } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getUserBids } from "@/services/auctionService"
-import { useToast } from "@/hooks/use-toast"
+import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { formatTimeLeft } from "@/lib/utils"
+import { getUserBids } from "@/services/auctionService"
+import { Bid } from "@/types/auction"
+import { getSafeImageUrl } from "@/lib/imageUtils"
+import { formatDateSafe } from "@/lib/dateUtils"
+import ErrorDisplay from "@/components/error-display"
+import LoadingSpinner from "@/components/loading-spinner"
 
 export default function UserBids() {
-  const [filter, setFilter] = useState("all")
-  const [userBids, setUserBids] = useState<any[]>([])
+  const [bids, setBids] = useState<Bid[]>([])
   const [loading, setLoading] = useState(true)
-  const { toast } = useToast()
-
+  const [error, setError] = useState<string | null>(null)
+  
   useEffect(() => {
-    const fetchUserBids = async () => {
+    const fetchBids = async () => {
       try {
         setLoading(true)
+        setError(null)
+        
         const response = await getUserBids()
-        console.log('User bids:', response)
+        console.log("User bids:", response)
         
-        // Format the data
-        const bidsData = response.data || response
-        
-        if (Array.isArray(bidsData)) {
-          setUserBids(bidsData.map(bid => {
-            // Determine bid status
-            let status = 'pending'
-            
-            if (bid.item.status === 'ended') {
-              status = bid.item.highestBidder === bid.bidder._id ? 'won' : 'lost'
-            } else {
-              status = bid.amount === bid.item.currentBid ? 'winning' : 'outbid'
-            }
-            
-            return {
-              id: bid._id,
-              auctionId: bid.item._id,
-              title: bid.item.title,
-              image: bid.item.images && bid.item.images.length > 0 
-                ? bid.item.images[0] 
-                : "/placeholder.svg?height=80&width=80",
-              bidAmount: bid.amount,
-              currentBid: bid.item.currentBid || bid.item.startingBid,
-              bidTime: new Date(bid.createdAt),
-              endTime: new Date(bid.item.endDate),
-              status
-            }
-          }))
+        // Handle different response structures
+        if (response && response.data) {
+          setBids(response.data)
+        } else if (Array.isArray(response)) {
+          setBids(response)
+        } else if (response && Array.isArray(response.bids)) {
+          // Handle possible new response format
+          setBids(response.bids)
+        } else {
+          setBids([])
         }
-      } catch (error) {
-        console.error('Failed to load user bids:', error)
-        toast({
-          title: "Erreur",
-          description: "Impossible de charger vos enchères",
-          variant: "destructive",
-        })
+      } catch (err) {
+        console.error("Failed to fetch user bids:", err)
+        setError(err instanceof Error ? err.message : "Failed to load your bids")
       } finally {
         setLoading(false)
       }
     }
-
-    fetchUserBids()
-  }, [toast])
-
-  // Filter bids based on selected filter
-  const filteredBids = filter === "all" ? userBids : userBids.filter((bid) => bid.status === filter)
-
-  // Function to format the bid time
-  const formatBidTime = (bidTime: Date) => {
-    return bidTime.toLocaleString('fr-FR', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  // Function to get status badge
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "winning":
-        return <Badge className="bg-green-500">En tête</Badge>
-      case "outbid":
-        return <Badge variant="destructive">Dépassé</Badge>
-      case "won":
-        return <Badge className="bg-green-500">Remporté</Badge>
-      case "lost":
-        return <Badge variant="secondary">Perdu</Badge>
-      default:
-        return <Badge variant="outline">{status}</Badge>
-    }
-  }
-
+    
+    fetchBids()
+  }, [])
+  
   if (loading) {
+    return <LoadingSpinner text="Chargement de vos enchères..." />
+  }
+  
+  if (error) {
+    return <ErrorDisplay message={error} onRetry={() => window.location.reload()} />
+  }
+  
+  if (bids.length === 0) {
     return (
-      <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h3 className="text-lg font-medium">Vos Enchères</h3>
-          <div className="w-full sm:w-[180px] h-10 bg-muted animate-pulse rounded" />
-        </div>
-        <div className="rounded-md border overflow-x-auto">
-          <div className="h-64 flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        </div>
+      <div className="text-center py-8">
+        <p className="mb-2">Vous n'avez encore placé aucune enchère</p>
+        <p className="text-sm text-muted-foreground mb-4">Commencez à enchérir pour suivre vos enchères ici</p>
+        <Link href="/auctions">
+          <Button>Explorer les enchères</Button>
+        </Link>
       </div>
     )
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h3 className="text-lg font-medium">Vos Enchères</h3>
-        <Select value={filter} onValueChange={setFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filtrer par statut" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Toutes les Enchères</SelectItem>
-            <SelectItem value="winning">En tête</SelectItem>
-            <SelectItem value="outbid">Dépassé</SelectItem>
-            <SelectItem value="won">Remporté</SelectItem>
-            <SelectItem value="lost">Perdu</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Article</TableHead>
-              <TableHead className="hidden md:table-cell">Votre Enchère</TableHead>
-              <TableHead>Enchère Actuelle</TableHead>
-              <TableHead className="hidden md:table-cell">Heure de l'Enchère</TableHead>
-              <TableHead>Se Termine</TableHead>
-              <TableHead>Statut</TableHead>
-              <TableHead className="text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredBids.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-4 text-muted-foreground">
-                  Aucune enchère trouvée
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredBids.map((bid) => (
-                <TableRow key={bid.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <div className="relative h-10 w-10 overflow-hidden rounded-md">
-                        <Image src={bid.image || "/placeholder.svg"} alt={bid.title} fill className="object-cover" />
-                      </div>
-                      <div className="font-medium line-clamp-1">{bid.title}</div>
+      {bids.map((bid) => {
+        // Get item from bid, handling different response structures
+        const item = typeof bid.item === 'object' ? bid.item : { _id: bid.item };
+        
+        return (
+          <Card key={bid._id} className="overflow-hidden">
+            <CardContent className="p-0">
+              <div className="flex flex-col sm:flex-row gap-4 p-4">
+                <Link href={`/auctions/${item._id}`}>
+                  <div className="relative h-24 w-24 rounded-md overflow-hidden">
+                    <Image
+                      src={
+                        'images' in item && item.images?.[0]
+                          ? getSafeImageUrl(item.images[0])
+                          : "/placeholder.svg"
+                      }
+                      alt={'title' in item ? item.title : "Enchère"}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                </Link>
+                <div className="flex-1">
+                  <div className="flex justify-between items-start mb-1">
+                    <Link href={`/auctions/${item._id}`} className="hover:underline">
+                      <h3 className="font-semibold">{'title' in item ? item.title : "Enchère"}</h3>
+                    </Link>
+                    <Badge 
+                      variant={'status' in item && item.status === 'active' ? "outline" : "secondary"}
+                    >
+                      {'status' in item ? (item.status === 'active' ? "En cours" : "Terminée") : "Statut inconnu"}
+                    </Badge>
+                  </div>
+                  
+                  <div className="flex items-center text-sm text-muted-foreground mb-4">
+                    <Clock className="mr-1 h-3 w-3" />
+                      {'endDate' in item && item.endDate
+                      ? formatTimeLeft(new Date(item.endDate))
+                      : 'endTime' in item && item.endTime
+                      ? formatTimeLeft(new Date(item.endTime))
+                      : "Date inconnue"}
+                  </div>
+                  
+                  <div className="flex justify-between items-end">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Votre enchère</p>
+                      <p className="font-bold">{bid.amount.toLocaleString('fr-FR')} €</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {formatDateSafe(bid.createdAt, 'dd MMM yyyy à HH:mm')}
+                      </p>
                     </div>
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">{bid.bidAmount} €</TableCell>
-                  <TableCell>{bid.currentBid} €</TableCell>
-                  <TableCell className="hidden md:table-cell">{formatBidTime(bid.bidTime)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      <Clock className="mr-1 h-3 w-3 text-muted-foreground" />
-                      <span>{formatTimeLeft(bid.endTime)}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>{getStatusBadge(bid.status)}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      <Link href={`/auctions/${bid.auctionId}`}>
-                        <Button variant="outline" size="sm" className="h-8 gap-1">
-                          <span className="hidden sm:inline">Voir</span>
-                          <ArrowUpRight className="h-3 w-3" />
-                        </Button>
-                      </Link>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                    
+                    <Link href={`/auctions/${item._id}`}>
+                      <Button size="sm" variant="outline" className="gap-2">
+                        Voir l'enchère
+                        <ArrowRight className="h-3 w-3" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   )
 }

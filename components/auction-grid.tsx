@@ -9,35 +9,81 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { formatTimeLeft } from "@/lib/utils"
 import { Auction } from "@/types/auction"
+import { getSafeImageUrl } from "@/lib/imageUtils"
 
 interface AuctionGridProps {
   auctions: Auction[];
   viewMode?: "grid" | "list";
+  emptyMessage?: string;
 }
 
-export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGridProps) {
+export default function AuctionGrid({ 
+  auctions, 
+  viewMode = "grid",
+  emptyMessage = "Aucune enchère disponible pour le moment" 
+}: AuctionGridProps) {
   const [favorites, setFavorites] = useState<string[]>(() => {
     // Initialize favorites from localStorage if available
     if (typeof window !== "undefined") {
-      const savedFavorites = localStorage.getItem("favorites")
-      return savedFavorites ? JSON.parse(savedFavorites) : []
+      try {
+        const savedFavorites = localStorage.getItem("favorites")
+        return savedFavorites ? JSON.parse(savedFavorites) : []
+      } catch (error) {
+        console.error("Error parsing favorites from localStorage:", error)
+        return []
+      }
     }
     return []
   })
 
-  const toggleFavorite = (id: string) => {
+  const toggleFavorite = (id: string, e?: React.MouseEvent) => {
+    // Prevent event from bubbling up to parent links
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+    
     const newFavorites = favorites.includes(id)
       ? favorites.filter((itemId: string) => itemId !== id)
       : [...favorites, id]
     
     setFavorites(newFavorites)
-    localStorage.setItem("favorites", JSON.stringify(newFavorites))
+    
+    try {
+      localStorage.setItem("favorites", JSON.stringify(newFavorites))
+    } catch (error) {
+      console.error("Error saving favorites to localStorage:", error)
+    }
+  }
+
+  // Safe accessor functions for nested properties
+  const getCategoryName = (auction: Auction): string => {
+    if (typeof auction.category === 'object' && auction.category !== null) {
+      return auction.category.name || "Non catégorisé"
+    }
+    return "Non catégorisé"
+  }
+
+  const getSellerName = (auction: Auction): string => {
+    if (typeof auction.seller === 'object' && auction.seller !== null) {
+      return auction.seller.username || "Inconnu"
+    }
+    return "Inconnu"
+  }
+
+  const getPrice = (auction: Auction): number => {
+    return auction.currentBid || auction.startingBid || 0
+  }
+
+  const getEndDate = (auction: Auction): Date => {
+    const date = auction.endDate || auction.endTime
+    return date ? new Date(date) : new Date()
   }
 
   if (!auctions || auctions.length === 0) {
     return (
       <div className="text-center py-12">
-        <p className="text-muted-foreground">Aucune enchère disponible pour le moment</p>
+        <p className="text-muted-foreground">{emptyMessage}</p>
       </div>
     )
   }
@@ -52,7 +98,7 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
                 <Link href={`/auctions/${auction._id}`}>
                   <div className="aspect-square sm:aspect-[4/3] relative">
                     <Image
-                      src={auction.images?.[0] || "/placeholder.svg"}
+                      src={auction.images?.[0] ? getSafeImageUrl(auction.images[0]) : "/placeholder.svg"}
                       alt={auction.title}
                       fill
                       className="object-cover"
@@ -70,7 +116,7 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => toggleFavorite(auction._id)}
+                      onClick={(e) => toggleFavorite(auction._id, e)}
                     >
                       <Heart className={`h-4 w-4 ${favorites.includes(auction._id) ? "fill-red-500 text-red-500" : ""}`} />
                       <span className="sr-only">Ajouter aux favoris</span>
@@ -82,15 +128,15 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
                   <div className="text-sm flex flex-wrap gap-x-4 gap-y-2 mb-4">
                     <div>
                       <span className="text-muted-foreground">Catégorie: </span>
-                      <span className="font-medium">{auction.category?.name || "Non catégorisé"}</span>
+                      <span className="font-medium">{getCategoryName(auction)}</span>
                     </div>
                     <div>
                       <span className="text-muted-foreground">Vendeur: </span>
-                      <span className="font-medium">{auction.seller?.username || "Inconnu"}</span>
+                      <span className="font-medium">{getSellerName(auction)}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <Clock className="h-3 w-3 text-muted-foreground" />
-                      <span>{formatTimeLeft(auction.endDate || auction.endTime || new Date())}</span>
+                      <span>{formatTimeLeft(getEndDate(auction))}</span>
                     </div>
                   </div>
                 </div>
@@ -98,7 +144,7 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
                   <div>
                     <p className="text-xs text-muted-foreground">Enchère actuelle</p>
                     <p className="text-lg font-bold">
-                      {(auction.currentBid || auction.startingBid || 0).toLocaleString('fr-FR')} €
+                      {getPrice(auction).toLocaleString('fr-FR')} €
                     </p>
                   </div>
                   <Link href={`/auctions/${auction._id}`}>
@@ -121,7 +167,7 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
             <Link href={`/auctions/${auction._id}`}>
               <div className="aspect-[4/3] overflow-hidden">
                 <Image
-                  src={auction.images?.[0] || "/placeholder.svg"}
+                  src={auction.images?.[0] ? getSafeImageUrl(auction.images[0]) : "/placeholder.svg"}
                   alt={auction.title}
                   width={600}
                   height={400}
@@ -133,7 +179,7 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
               variant="ghost"
               size="icon"
               className="absolute top-2 right-2 bg-background/80 backdrop-blur-sm rounded-full h-8 w-8"
-              onClick={() => toggleFavorite(auction._id)}
+              onClick={(e) => toggleFavorite(auction._id, e)}
             >
               <Heart
                 className={`h-4 w-4 ${favorites.includes(auction._id) ? "fill-red-500 text-red-500" : ""}`}
@@ -157,13 +203,13 @@ export default function AuctionGrid({ auctions, viewMode = "grid" }: AuctionGrid
               <div>
                 <p className="text-sm font-medium">Enchère actuelle</p>
                 <p className="text-lg font-bold">
-                  {(auction.currentBid || auction.startingBid || 0).toLocaleString('fr-FR')} €
+                  {getPrice(auction).toLocaleString('fr-FR')} €
                 </p>
               </div>
               <div className="text-left sm:text-right">
                 <div className="flex items-center text-sm text-muted-foreground">
                   <Clock className="h-3 w-3 mr-1" />
-                  {formatTimeLeft(auction.endDate || auction.endTime || new Date())}
+                  {formatTimeLeft(getEndDate(auction))}
                 </div>
               </div>
             </div>
