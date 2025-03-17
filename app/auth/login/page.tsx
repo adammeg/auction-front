@@ -22,8 +22,38 @@ export default function LoginPage() {
   const callbackUrl = searchParams.get("callbackUrl") || "/auctions"
   const { toast } = useToast()
 
+  const validateForm = (): { valid: boolean, message?: string } => {
+    if (!email.trim()) {
+      return { valid: false, message: "L'email est requis" };
+    }
+    
+    // Basic email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return { valid: false, message: "Format d'email invalide" };
+    }
+    
+    if (!password) {
+      return { valid: false, message: "Le mot de passe est requis" };
+    }
+    
+    return { valid: true };
+  }
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    
+    // Validate form
+    const validation = validateForm();
+    if (!validation.valid) {
+      toast({
+        title: "Champs invalides",
+        description: validation.message,
+        variant: "destructive",
+      })
+      return;
+    }
+    
     setIsLoading(true)
 
     try {
@@ -36,7 +66,7 @@ export default function LoginPage() {
       })
 
       // Redirect to callback URL or auctions page
-      router.push(callbackUrl)
+      router.push("/auctions")
     } catch (error: any) {
       console.error("Login error:", error);
       

@@ -43,4 +43,25 @@ export function formatApiResponse<T>(data: any): ApiResponse<T> {
     success: true,
     data: data as T
   };
+}
+
+export function normalizeResponse<T>(response: any): T[] {
+  // Handle array responses
+  if (Array.isArray(response)) {
+    return response;
+  }
+  
+  // Handle { data: [...] } format
+  if (response && Array.isArray(response.data)) {
+    return response.data;
+  }
+  
+  // Handle { data: { data: [...] } } format (nested data property)
+  if (response && response.data && Array.isArray(response.data.data)) {
+    return response.data.data;
+  }
+  
+  // Return empty array as fallback
+  console.warn("Unexpected API response format:", response);
+  return [];
 } 

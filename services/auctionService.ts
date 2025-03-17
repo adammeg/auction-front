@@ -26,9 +26,24 @@ export interface Auction {
 // Get featured auctions
 export const getFeaturedAuctions = async (): Promise<Auction[]> => {
   console.log('Fetching featured auctions');
-  const response = await api.get('/items/featured');
-  console.log('Featured auctions response:', response.data);
-  return response.data;
+  try {
+    const response = await api.get('/items/featured');
+    console.log('Featured auctions response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching featured auctions:', error);
+    return [];
+  }
 };
 
 // Search auctions
@@ -36,12 +51,16 @@ export const searchAuctions = async ({
   query = '',
   sort = 'relevance',
   category = '',
+  minPrice,
+  maxPrice,
   page = 1,
   limit = 12
 }: {
   query?: string;
   sort?: string;
   category?: string;
+  minPrice?: number;
+  maxPrice?: number;
   page?: number;
   limit?: number;
 }): Promise<any> => {
@@ -52,28 +71,71 @@ export const searchAuctions = async ({
   if (query) params.append('q', query);
   if (sort) params.append('sort', sort);
   if (category) params.append('category', category);
+  if (minPrice !== undefined) params.append('minPrice', minPrice.toString());
+  if (maxPrice !== undefined) params.append('maxPrice', maxPrice.toString());
   if (page) params.append('page', page.toString());
   if (limit) params.append('limit', limit.toString());
   
-  const response = await api.get(`/items/search?${params.toString()}`);
-  console.log('Search results:', response.data);
-  return response.data;
+  try {
+    const response = await api.get(`/items/search?${params.toString()}`);
+    console.log('Search results:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data;
+    }
+    
+    if (Array.isArray(response.data)) {
+      return { data: response.data, total: response.data.length };
+    }
+    
+    return { data: [], total: 0 };
+  } catch (error) {
+    console.error('Error searching auctions:', error);
+    throw error;
+  }
 };
 
 // Get all active auctions
 export const getActiveAuctions = async (): Promise<Auction[]> => {
   console.log('Fetching active auctions');
-  const response = await api.get('/items/active');
-  console.log('Active auctions response:', response.data);
-  return response.data;
+  try {
+    const response = await api.get('/items/active');
+    console.log('Active auctions response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    if (Array.isArray(response.data)) {
+      return response.data;
+    }
+    
+    return [];
+  } catch (error) {
+    console.error('Error fetching active auctions:', error);
+    throw error;
+  }
 };
 
 // Get auction by ID
-export const getAuctionById = async (id: string): Promise<any> => {
+export const getAuctionById = async (id: string): Promise<Auction | null> => {
   console.log('Fetching auction details for ID:', id);
-  const response = await api.get(`/items/${id}`);
-  console.log('Auction details response:', response.data);
-  return response.data;
+  try {
+    const response = await api.get(`/items/${id}`);
+    console.log('Auction details response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching auction ${id}:`, error);
+    return null;
+  }
 };
 
 // Get auctions by category
@@ -84,12 +146,27 @@ export const getAuctionsByCategory = async (categoryId: string): Promise<Auction
 
 // Get user listings
 export const getUserListings = async (): Promise<any> => {
-    console.log('Fetching user listings');
+  console.log('Fetching user listings');
+  try {
     const response = await api.get('/items/my-items');
     console.log('User listings response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data;
+    }
+    
+    if (Array.isArray(response.data)) {
+      return { data: response.data, count: response.data.length };
+    }
+    
     return response.data;
-  };
-  
+  } catch (error) {
+    console.error('Error fetching user listings:', error);
+    throw error;
+  }
+};
+
 // Create new auction
 export const createAuction = async (auctionData: FormData): Promise<Auction> => {
   const response = await api.post('/api/items', auctionData, {
@@ -156,7 +233,22 @@ export const getUserDashboardStats = async (): Promise<any> => {
 // Get user bids
 export const getUserBids = async (): Promise<any> => {
   console.log('Fetching user bids');
-  const response = await api.get('/bids/user');
-  console.log('User bids response:', response.data);
-  return response.data;
+  try {
+    const response = await api.get('/bids/user');
+    console.log('User bids response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data;
+    }
+    
+    if (Array.isArray(response.data)) {
+      return { data: response.data, count: response.data.length };
+    }
+    
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user bids:', error);
+    throw error;
+  }
 }; 

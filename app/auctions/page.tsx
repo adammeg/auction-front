@@ -1,248 +1,336 @@
-import { Filter, SlidersHorizontal, Search } from "lucide-react"
+"use client"
+
+import { useState, useEffect } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import Link from "next/link"
+import { Filter, SlidersHorizontal, Grid3X3, List } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Separator } from "@/components/ui/separator"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { getActiveAuctions, searchAuctions } from "@/services/auctionService"
+import { getCategories } from "@/services/categoryService"
 import AuctionGrid from "@/components/auction-grid"
-import Header from "@/components/header"
+import { useToast } from "@/components/ui/use-toast"
+import { Auction } from "@/types/auction"
+import { Category } from "@/services/categoryService"
+
 export default function AuctionsPage() {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { toast } = useToast()
+
+  const [auctions, setAuctions] = useState<Auction[]>([])
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [total, setTotal] = useState(0)
+
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("q") || "")
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "")
+  const [sortOrder, setSortOrder] = useState("newest")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [minPrice, setMinPrice] = useState<string>("")
+  const [maxPrice, setMaxPrice] = useState<string>("")
+  const [page, setPage] = useState(1)
+  const [limit] = useState(12)
+
+  // Fetch auctions and categories on initial load
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        // Get categories
+        const categoriesData = await getCategories()
+        if (Array.isArray(categoriesData)) {
+          setCategories(categoriesData)
+        } else if (categoriesData && Array.isArray(categoriesData)) {
+          setCategories(categoriesData)
+        } else {
+          console.warn("Unexpected categories response format:", categoriesData)
+          setCategories([])
+        }
+
+        // Get auctions based on search params
+        const initialQuery = searchParams.get("q")
+        const initialCategory = searchParams.get("category")
+
+        let auctionsData
+        if (initialQuery || initialCategory) {
+          // Use search with filters
+          auctionsData = await searchAuctions({
+            query: initialQuery || "",
+            category: initialCategory || "",
+            sort: "newest"
+          })
+        } else {
+          // Get all active auctions
+          auctionsData = await getActiveAuctions()
+        }
+
+        console.log("Auctions data:", auctionsData)
+
+        // Check the structure of the response and handle appropriately
+        if (auctionsData && auctionsData.data) {
+          setAuctions(auctionsData.data)
+          setTotal(auctionsData.total || auctionsData.data.length)
+        } else if (Array.isArray(auctionsData)) {
+          setAuctions(auctionsData)
+          setTotal(auctionsData.length)
+        } else {
+          setAuctions([])
+          setTotal(0)
+          console.warn("Unexpected response format:", auctionsData)
+        }
+      } catch (err) {
+        console.error("Error fetching data:", err)
+        const errorMessage = err instanceof Error ? err.message : "Failed to load auctions"
+        setError(errorMessage)
+        toast({
+          title: "Error",
+          description: "Failed to load auctions. Please try again.",
+          variant: "destructive"
+        })
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [searchParams, toast])
+
+  const handleSearch = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Build search params
+      const searchParams: any = {
+        query: searchQuery,
+        category: selectedCategory,
+        sort: sortOrder,
+        page,
+        limit
+      }
+
+      // Add price range if set
+      if (minPrice) searchParams.minPrice = parseFloat(minPrice)
+      if (maxPrice) searchParams.maxPrice = parseFloat(maxPrice)
+
+      const response = await searchAuctions(searchParams)
+
+      // Check response format
+      if (response && response.data) {
+        setAuctions(response.data)
+        setTotal(response.total || response.data.length)
+      } else if (Array.isArray(response)) {
+        setAuctions(response)
+        setTotal(response.length)
+      } else {
+        setAuctions([])
+        setTotal(0)
+        console.warn("Unexpected search response format:", response)
+      }
+
+      // Update URL with search parameters for shareable links
+      const url = new URL(window.location.href)
+      if (searchQuery) url.searchParams.set('q', searchQuery)
+      else url.searchParams.delete('q')
+      
+      if (selectedCategory) url.searchParams.set('category', selectedCategory)
+      else url.searchParams.delete('category')
+      
+      window.history.pushState({}, '', url.toString())
+      
+    } catch (err) {
+      console.error("Search error:", err)
+      const errorMessage = err instanceof Error ? err.message : "Failed to perform search"
+      setError(errorMessage)
+      toast({
+        title: "Search Error",
+        description: errorMessage,
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
-    <>
-    <Header />
-    <div className="container px-4 py-8 md:px-6 md:py-12">
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="space-y-2">
-            <h1 className="text-3xl font-bold tracking-tighter sm:text-4xl">Toutes les Enchères</h1>
-            <p className="text-muted-foreground">Parcourez toutes les enchères actives dans toutes les catégories</p>
-          </div>
+    <div className="container py-8 px-4 md:px-6">
+      <div className="flex flex-col gap-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Enchères en Cours</h1>
+          <p className="text-muted-foreground mt-2">
+            Parcourez et enchérissez sur des articles uniques et intéressants
+          </p>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+          <form onSubmit={handleSearch} className="flex gap-2 flex-1">
+            <Input
+              type="search"
+              placeholder="Rechercher des enchères..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="max-w-sm"
+            />
+            <Button type="submit">Rechercher</Button>
+          </form>
+
           <div className="flex items-center gap-2">
-            <form className="relative w-full md:w-auto">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input type="search" placeholder="Rechercher des enchères..." className="w-full pl-8 md:w-[300px]" />
-            </form>
-            <Button variant="outline" size="icon" className="md:hidden">
-              <Filter className="h-4 w-4" />
-              <span className="sr-only">Filtrer</span>
+            <Select value={sortOrder} onValueChange={(value) => setSortOrder(value)}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Trier par" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Plus récent</SelectItem>
+                <SelectItem value="oldest">Plus ancien</SelectItem>
+                <SelectItem value="price_asc">Prix croissant</SelectItem>
+                <SelectItem value="price_desc">Prix décroissant</SelectItem>
+                <SelectItem value="ending_soon">Bientôt terminé</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" size="icon">
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Filtres</SheetTitle>
+                  <SheetDescription>
+                    Filtrer les enchères par catégorie, prix, etc.
+                  </SheetDescription>
+                </SheetHeader>
+
+                <form onSubmit={handleSearch} className="py-4 space-y-4">
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Catégories</h3>
+                    <Select
+                      value={selectedCategory}
+                      onValueChange={(value) => setSelectedCategory(value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Toutes les catégories" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Toutes les catégories</SelectItem>
+                        {categories && categories.map((category) => (
+                          <SelectItem key={category._id} value={category._id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-medium">Prix</h3>
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="Min" 
+                        type="number" 
+                        min="0"
+                        value={minPrice}
+                        onChange={(e) => setMinPrice(e.target.value)}
+                      />
+                      <Input 
+                        placeholder="Max" 
+                        type="number" 
+                        min="0"
+                        value={maxPrice}
+                        onChange={(e) => setMaxPrice(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <Button type="submit" className="w-full">
+                    Appliquer les filtres
+                  </Button>
+                </form>
+              </SheetContent>
+            </Sheet>
+
+            <div className="flex border rounded-md">
+              <Button
+                variant={viewMode === "grid" ? "default" : "ghost"}
+                size="icon"
+                className="rounded-none rounded-l-md"
+                onClick={() => setViewMode("grid")}
+              >
+                <Grid3X3 className="h-4 w-4" />
+              </Button>
+              <Separator orientation="vertical" className="h-8" />
+              <Button
+                variant={viewMode === "list" ? "default" : "ghost"}
+                size="icon"
+                className="rounded-none rounded-r-md"
+                onClick={() => setViewMode("list")}
+              >
+                <List className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Chargement des enchères...</p>
+          </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <p className="text-destructive mb-2">Une erreur est survenue</p>
+            <p className="text-muted-foreground">{error}</p>
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={() => window.location.reload()}
+            >
+              Réessayer
             </Button>
           </div>
-        </div>
-
-        <div className="grid gap-6 md:grid-cols-[240px_1fr] lg:grid-cols-[280px_1fr]">
-          <div className="hidden md:block">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h2 className="font-semibold">Filtres</h2>
-                <Button variant="ghost" size="sm" className="h-auto p-0 text-sm">
-                  Réinitialiser
-                </Button>
-              </div>
-
-              <Accordion type="multiple" defaultValue={["category", "price", "condition"]}>
-                <AccordionItem value="category">
-                  <AccordionTrigger>Catégorie</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-watches" />
-                        <Label htmlFor="category-watches" className="text-sm font-normal">
-                          Montres & Bijoux
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-art" />
-                        <Label htmlFor="category-art" className="text-sm font-normal">
-                          Art & Collections
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-vehicles" />
-                        <Label htmlFor="category-vehicles" className="text-sm font-normal">
-                          Véhicules
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-books" />
-                        <Label htmlFor="category-books" className="text-sm font-normal">
-                          Livres & Manuscrits
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="category-electronics" />
-                        <Label htmlFor="category-electronics" className="text-sm font-normal">
-                          Électronique
-                        </Label>
-                      </div>
-                      <Button variant="link" size="sm" className="h-auto p-0 text-xs">
-                        Voir plus
-                      </Button>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="price">
-                  <AccordionTrigger>Fourchette de Prix</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="space-y-1">
-                          <Label htmlFor="min-price" className="text-xs">
-                            Min
-                          </Label>
-                          <Input id="min-price" type="number" placeholder="0 €" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label htmlFor="max-price" className="text-xs">
-                            Max
-                          </Label>
-                          <Input id="max-price" type="number" placeholder="10000 €" />
-                        </div>
-                      </div>
-                      <Button className="w-full">Appliquer</Button>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="condition">
-                  <AccordionTrigger>État</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="condition-new" />
-                        <Label htmlFor="condition-new" className="text-sm font-normal">
-                          Neuf
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="condition-like-new" />
-                        <Label htmlFor="condition-like-new" className="text-sm font-normal">
-                          Comme Neuf
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="condition-excellent" />
-                        <Label htmlFor="condition-excellent" className="text-sm font-normal">
-                          Excellent
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="condition-good" />
-                        <Label htmlFor="condition-good" className="text-sm font-normal">
-                          Bon
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="condition-fair" />
-                        <Label htmlFor="condition-fair" className="text-sm font-normal">
-                          Correct
-                        </Label>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-                <AccordionItem value="time">
-                  <AccordionTrigger>Temps Restant</AccordionTrigger>
-                  <AccordionContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="time-ending-soon" />
-                        <Label htmlFor="time-ending-soon" className="text-sm font-normal">
-                          Se termine bientôt (24h)
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="time-1-3-days" />
-                        <Label htmlFor="time-1-3-days" className="text-sm font-normal">
-                          1-3 jours
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="time-3-7-days" />
-                        <Label htmlFor="time-3-7-days" className="text-sm font-normal">
-                          3-7 jours
-                        </Label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <Checkbox id="time-7-plus-days" />
-                        <Label htmlFor="time-7-plus-days" className="text-sm font-normal">
-                          7+ jours
-                        </Label>
-                      </div>
-                    </div>
-                  </AccordionContent>
-                </AccordionItem>
-              </Accordion>
-            </div>
+        ) : auctions.length === 0 ? (
+          <div className="text-center py-12">
+            <p className="text-muted-foreground mb-4">Aucune enchère ne correspond à votre recherche</p>
+            <Link href="/auctions">
+              <Button variant="outline">Voir toutes les enchères</Button>
+            </Link>
           </div>
-
-          <div className="space-y-6">
-            <div className="flex flex-wrap items-center gap-2 justify-between">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline" className="rounded-sm">
-                  Enchères Actives
-                </Badge>
-                <Badge variant="outline" className="rounded-sm">
-                  Montres & Bijoux
-                </Badge>
-                <Badge variant="outline" className="rounded-sm">
-                  100 € - 1000 €
-                </Badge>
-                <Button variant="ghost" size="sm" className="h-6 px-2 text-xs">
-                  Tout Effacer
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" className="h-8 gap-1 hidden md:flex">
-                  <SlidersHorizontal className="h-3.5 w-3.5" />
-                  <span>Trier</span>
-                </Button>
-                <Select defaultValue="ending-soon">
-                  <SelectTrigger className="h-8 w-[160px]">
-                    <SelectValue placeholder="Trier par" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ending-soon">Se termine bientôt</SelectItem>
-                    <SelectItem value="newly-listed">Récemment ajouté</SelectItem>
-                    <SelectItem value="price-low">Prix: Croissant</SelectItem>
-                    <SelectItem value="price-high">Prix: Décroissant</SelectItem>
-                    <SelectItem value="bids-high">Plus d'enchères</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        ) : (
+          <>
+            <div className="text-sm text-muted-foreground mb-4">
+              {total} résultat{total !== 1 && 's'} trouvé{total !== 1 && 's'}
             </div>
-
-            <AuctionGrid />
-
-            <div className="flex items-center justify-center">
-              <div className="flex flex-wrap items-center space-x-2">
-                <Button variant="outline" size="sm" disabled>
-                  Précédent
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                  1
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                  2
-                </Button>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                  3
-                </Button>
-                <span>...</span>
-                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                  12
-                </Button>
-                <Button variant="outline" size="sm">
-                  Suivant
-                </Button>
-              </div>
-            </div>
-          </div>
-        </div>
+            <AuctionGrid auctions={auctions} viewMode={viewMode} />
+            
+            {/* Add pagination here if needed */}
+          </>
+        )}
       </div>
     </div>
-    </>
   )
 }
 

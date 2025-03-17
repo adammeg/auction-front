@@ -17,8 +17,8 @@ export default function ProtectedRoute({
   const router = useRouter()
 
   useEffect(() => {
-    if ( !isAuthenticated) {
-      router.push(`${redirectTo}?redirect=${window.location.pathname}`)
+    if (!isAuthenticated) {
+      router.push(`${redirectTo}?callbackUrl=${encodeURIComponent(window.location.pathname)}`)
     }
   }, [isAuthenticated, redirectTo, router])
 
