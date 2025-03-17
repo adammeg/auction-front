@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import { Package, Heart, Settings, PlusCircle, DollarSign, BarChart3, ShoppingCart } from "lucide-react"
+import { Package, Heart, Settings, PlusCircle, DollarSign, BarChart3, ShoppingCart, Activity, Clock, Eye, ChevronRight, AlertTriangle } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,64 +13,50 @@ import UserBids from "@/components/user-bids"
 import UserListings from "@/components/user-listings"
 import UserWatchlist from "@/components/user-watchlist"
 import { getUserDashboardStats } from "@/services/auctionService"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { formatTimeLeft } from "@/lib/utils"
 import ProtectedRoute from "@/components/protected-route"
+import { useUser } from "@/contexts/UserContext"
+import LoadingSpinner from "@/components/loading-spinner"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function DashboardPage() {
+  const { user, isAuthenticated } = useUser()
+  const { toast } = useToast()
   const [stats, setStats] = useState({
-    activeBids: 0,
-    activeListings: 0,
+    activeAuctions: 0,
+    completedAuctions: 0,
+    totalBids: 0,
     watchlistCount: 0,
-    wonAuctions: 0,
-    endingSoon: []
+    recentActivity: []
   })
   const [loading, setLoading] = useState(true)
-  const { toast } = useToast()
+  const [error, setError] = useState(false)
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true)
+        const data = await getUserDashboardStats()
+        setStats(data)
+      } catch (err) {
+        console.error("Error fetching dashboard data:", err)
+        setError(true)
         
-        // Get watchlist count from localStorage
-        const watchlistIds = JSON.parse(localStorage.getItem('favorites') || '[]')
-        
-        // Fetch dashboard stats
-        const response = await getUserDashboardStats()
-        console.log('Dashboard stats:', response)
-        
-        // Format the data
-        const statsData = response.data || response
-        
-        setStats({
-          activeBids: statsData.activeBids || 0,
-          activeListings: statsData.activeListings || 0,
-          watchlistCount: watchlistIds.length,
-          wonAuctions: statsData.wonAuctions || 0,
-          endingSoon: Array.isArray(statsData.endingSoon) ? statsData.endingSoon.map((item: any) => ({
-            id: item._id,
-            title: item.title,
-            image: item.images && item.images.length > 0 ? item.images[0] : "/placeholder.svg",
-            currentBid: item.currentBid || item.startingBid,
-            userBid: item.userBid || 0,
-            endTime: new Date(item.endDate)
-          })) : []
-        })
-      } catch (error) {
-        console.error('Failed to load dashboard data:', error)
         toast({
-          title: "Erreur",
-          description: "Impossible de charger les données du tableau de bord",
-          variant: "destructive",
+          title: "Erreur lors du chargement",
+          description: "Impossible de charger les statistiques du tableau de bord. Réessayez plus tard.",
+          variant: "destructive"
         })
       } finally {
         setLoading(false)
       }
     }
-
-    fetchDashboardData()
-  }, [toast])
+    
+    if (isAuthenticated) {
+      fetchDashboardData()
+    }
+  }, [isAuthenticated, toast])
 
   return (
     <ProtectedRoute>
@@ -104,7 +90,7 @@ export default function DashboardPage() {
                 <DollarSign className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : stats.activeBids}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : stats.activeAuctions}</div>
                 <p className="text-xs text-muted-foreground">Enchères sur lesquelles vous avez misé</p>
               </CardContent>
             </Card>
@@ -114,7 +100,7 @@ export default function DashboardPage() {
                 <Package className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : stats.activeListings}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : stats.completedAuctions}</div>
                 <p className="text-xs text-muted-foreground">Articles que vous vendez actuellement</p>
               </CardContent>
             </Card>
@@ -134,7 +120,7 @@ export default function DashboardPage() {
                 <ShoppingCart className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{loading ? "..." : stats.wonAuctions}</div>
+                <div className="text-2xl font-bold">{loading ? "..." : stats.totalBids}</div>
                 <p className="text-xs text-muted-foreground">Enchères que vous avez gagnées</p>
               </CardContent>
             </Card>
@@ -179,9 +165,9 @@ export default function DashboardPage() {
                       </div>
                     ))}
                   </div>
-                ) : stats.endingSoon.length > 0 ? (
+                ) : stats.recentActivity.length > 0 ? (
                   <div className="space-y-4">
-                    {stats.endingSoon.map((item: any) => (
+                    {stats.recentActivity.map((item: any) => (
                       <div key={item.id} className="flex items-start gap-4">
                         <div className="relative aspect-square h-16 w-16 overflow-hidden rounded-md">
                           <Image

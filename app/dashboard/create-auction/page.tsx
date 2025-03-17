@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import { useToast } from "@/hooks/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 import { createAuction } from "@/services/auctionService"
 import { getCategories } from "@/services/categoryService"
 import ProtectedRoute from "@/components/protected-route"
@@ -30,7 +30,8 @@ export default function CreateAuctionPage() {
     condition: '',
     startingBid: '',
     reservePrice: '',
-    duration: '7',
+    auctionDuration: '7',
+    minBid: '1',
     shippingOptions: {
       domestic: false,
       international: false,
@@ -338,13 +339,13 @@ export default function CreateAuctionPage() {
                 </div>
 
                 <div className="grid gap-3">
-                  <Label htmlFor="duration">Durée de l'Enchère</Label>
-                  <Select
-                    value={formData.duration}
-                    onValueChange={(value) => handleSelectChange('duration', value)}
+                  <Label htmlFor="auctionDuration">Durée de l'enchère (jours)</Label>
+                  <Select 
+                    value={formData.auctionDuration || "7"} 
+                    onValueChange={(value) => handleSelectChange('auctionDuration', value)}
                     required
                   >
-                    <SelectTrigger id="duration">
+                    <SelectTrigger>
                       <SelectValue placeholder="Sélectionnez la durée" />
                     </SelectTrigger>
                     <SelectContent>
@@ -357,8 +358,22 @@ export default function CreateAuctionPage() {
                       <SelectItem value="30">30 jours</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+
+                <div className="grid gap-3">
+                  <Label htmlFor="minBid">Incrément minimal d'enchère (DT)</Label>
+                  <Input
+                    id="minBid"
+                    name="minBid"
+                    type="number"
+                    min="1"
+                    placeholder="Ex: 5"
+                    value={formData.minBid || 1}
+                    onChange={handleChange}
+                    required
+                  />
                   <p className="text-xs text-muted-foreground">
-                    Durée pendant laquelle votre enchère sera active
+                    Montant minimum qu'un enchérisseur doit ajouter par rapport à l'enchère précédente
                   </p>
                 </div>
               </CardContent>

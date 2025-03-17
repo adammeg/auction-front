@@ -167,8 +167,33 @@ export const getUserListings = async (): Promise<any> => {
   }
 };
 
-// Create new auction
+// Create new auction - simplified version
 export const createAuction = async (auctionData: FormData): Promise<Auction> => {
+  // Map field names to match backend expectations
+  const itemCondition = auctionData.get('condition');
+  const startBid = auctionData.get('startingBid');
+  
+  // Add required fields with either existing values or defaults
+  auctionData.append('itemCondition', itemCondition ? itemCondition.toString() : 'used');
+  auctionData.append('startBid', startBid ? startBid.toString() : '0');
+  
+  // Set minimum bid if not provided
+  if (!auctionData.has('minBid')) {
+    const startingValue = Number(startBid || 0);
+    auctionData.append('minBid', Math.max(1, Math.round(startingValue * 0.05)).toString());
+  }
+  
+  // Set auction duration if not provided
+  if (!auctionData.has('auctionDuration')) {
+    auctionData.append('auctionDuration', '7'); // Default 7 days
+  }
+  
+  // Calculate end date
+  const auctionDuration = Number(auctionData.get('auctionDuration') || 7);
+  const endDate = new Date();
+  endDate.setDate(endDate.getDate() + auctionDuration);
+  auctionData.append('endDate', endDate.toISOString());
+  
   const response = await api.post('/items/create', auctionData, {
     headers: {
       'Content-Type': 'multipart/form-data',
@@ -224,11 +249,29 @@ export const getRelatedAuctions = async (
 
 // Get user dashboard stats
 export const getUserDashboardStats = async (): Promise<any> => {
-    console.log('Fetching user dashboard stats');
+  console.log('Fetching user dashboard stats');
+  try {
     const response = await api.get('/users/dashboard-stats');
     console.log('Dashboard stats response:', response.data);
+    
+    // Handle different response formats
+    if (response.data && response.data.data) {
+      return response.data.data;
+    }
+    
     return response.data;
-  };
+  } catch (error) {
+    console.error('Error fetching user dashboard stats:', error);
+    // Return default stats as fallback for when the backend fails
+    return {
+      activeAuctions: 0,
+      completedAuctions: 0,
+      totalBids: 0,
+      watchlistCount: 0,
+      recentActivity: []
+    };
+  }
+};
 
 // Get user bids
 export const getUserBids = async (): Promise<any> => {
