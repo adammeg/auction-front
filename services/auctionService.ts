@@ -169,7 +169,7 @@ export const getUserListings = async (): Promise<any> => {
 
 // Create new auction
 export const createAuction = async (auctionData: FormData): Promise<Auction> => {
-  const response = await api.post('/api/items', auctionData, {
+  const response = await api.post('/items/create', auctionData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -179,7 +179,7 @@ export const createAuction = async (auctionData: FormData): Promise<Auction> => 
 
 // Place bid on auction
 export const placeBid = async (itemId: string, amount: number): Promise<any> => {
-  const response = await api.post('/bids', { itemId, amount });
+  const response = await api.post('/bids/place-bid', { itemId, amount });
   return response.data;
 };
 
