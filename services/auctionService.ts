@@ -173,22 +173,22 @@ export const createAuction = async (auctionData: FormData): Promise<Auction> => 
   const condition = auctionData.get('condition');
   const startBid = auctionData.get('startingBid');
   
-  // Map frontend condition values to backend's allowed enum values
+  // Updated condition mapping to match backend's exact enum values
   const conditionMapping: {[key: string]: string} = {
     'new': 'new',
-    'like_new': 'like_new',
-    'excellent': 'very_good', // Map 'excellent' to 'very_good'
-    'very_good': 'very_good',
-    'good': 'good',
+    'like_new': 'likeNew',         // Changed from 'like_new' to 'likeNew'
+    'excellent': 'excellent',      // Keep as is - it's valid in the backend
+    'very_good': 'veryGood',       // Changed from 'very_good' to 'veryGood'
+    'good': 'good',                // This should be valid
     'fair': 'fair',
     'poor': 'poor',
-    'for_parts': 'for_parts'
+    'for_parts': 'forParts'        // Changed from 'for_parts' to 'forParts'
   };
   
-  // Get mapped condition or fallback to 'good'
+  // Get mapped condition or fallback to 'new'
   const mappedCondition = condition 
-    ? (conditionMapping[condition.toString()] || 'good') 
-    : 'good';
+    ? (conditionMapping[condition.toString()] || 'new') 
+    : 'new';
   
   // Add required fields with correct values
   auctionData.append('itemCondition', mappedCondition);
@@ -216,14 +216,27 @@ export const createAuction = async (auctionData: FormData): Promise<Auction> => 
   }
   
   // Add the endDate in ISO format
-  auctionData.append('endDate', endDate.toISOString());
+  const endDateString = endDate.toISOString();
+  auctionData.append('endDate', endDateString);
   
   // Log what we're sending to help debug
-  console.log('Sending auction data with endDate:', endDate.toISOString());
-  console.log('Sending auction data with itemCondition:', mappedCondition);
+  console.log('Sending auction data:');
+  console.log('- endDate:', endDateString);
+  console.log('- itemCondition:', mappedCondition);
+  console.log('- startBid:', auctionData.get('startBid'));
+  console.log('- minBid:', auctionData.get('minBid'));
+  console.log('- auctionDuration:', auctionData.get('auctionDuration'));
+  
+  // Create a new FormData to ensure proper data structure
+  const apiFormData = new FormData();
+  
+  // Copy all fields from the original FormData
+  for (const [key, value] of auctionData.entries()) {
+    apiFormData.append(key, value);
+  }
   
   try {
-    const response = await api.post('/items/create', auctionData, {
+    const response = await api.post('/items/create', apiFormData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -237,7 +250,7 @@ export const createAuction = async (auctionData: FormData): Promise<Auction> => 
       // For standard Error objects
       const errorWithResponse = error as any;
       if (errorWithResponse.response && errorWithResponse.response.data) {
-        console.error('Error details:', errorWithResponse.response.data);
+        console.error('Error details:', JSON.stringify(errorWithResponse.response.data, null, 2));
       }
     }
     

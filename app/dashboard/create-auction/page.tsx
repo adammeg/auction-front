@@ -245,12 +245,13 @@ export default function CreateAuctionPage() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="new">Neuf</SelectItem>
-                      <SelectItem value="like_new">Comme neuf</SelectItem>
-                      <SelectItem value="very_good">Très bon état</SelectItem>
+                      <SelectItem value="likeNew">Comme neuf</SelectItem>
+                      <SelectItem value="excellent">Excellent</SelectItem>
+                      <SelectItem value="veryGood">Très bon état</SelectItem>
                       <SelectItem value="good">Bon état</SelectItem>
                       <SelectItem value="fair">État acceptable</SelectItem>
                       <SelectItem value="poor">État médiocre</SelectItem>
-                      <SelectItem value="for_parts">Pour pièces détachées</SelectItem>
+                      <SelectItem value="forParts">Pour pièces détachées</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
