@@ -167,92 +167,104 @@ export const getUserListings = async (): Promise<any> => {
   }
 };
 
-// Create new auction - fix validation issues
+// Create new auction with direct JSON payload instead of FormData
 export const createAuction = async (auctionData: FormData): Promise<Auction> => {
-  // Map field names to match backend expectations
-  const condition = auctionData.get('condition');
-  const startBid = auctionData.get('startingBid');
+  console.log('Creating new auction...');
   
-  // Updated condition mapping to match backend's exact enum values
-  const conditionMapping: {[key: string]: string} = {
+  // Extract all form data into a plain object
+  const formObject: Record<string, any> = {};
+  for (const [key, value] of auctionData.entries()) {
+    // Skip files, we'll handle them separately
+    if (typeof value !== 'object' || value === null) {
+      formObject[key] = value;
+    }
+  }
+  
+  // Extract files
+  const images = auctionData.getAll('images') as File[];
+  
+  // Map condition values correctly
+  const conditionMap: Record<string, string> = {
     'new': 'new',
-    'like_new': 'likeNew',         // Changed from 'like_new' to 'likeNew'
-    'excellent': 'excellent',      // Keep as is - it's valid in the backend
-    'very_good': 'veryGood',       // Changed from 'very_good' to 'veryGood'
-    'good': 'good',                // This should be valid
+    'likeNew': 'likeNew',
+    'like_new': 'likeNew',
+    'excellent': 'excellent',
+    'veryGood': 'veryGood',
+    'very_good': 'veryGood',
+    'good': 'good',
     'fair': 'fair',
     'poor': 'poor',
-    'for_parts': 'forParts'        // Changed from 'for_parts' to 'forParts'
+    'forParts': 'forParts',
+    'for_parts': 'forParts'
   };
   
-  // Get mapped condition or fallback to 'new'
-  const mappedCondition = condition 
-    ? (conditionMapping[condition.toString()] || 'new') 
-    : 'new';
-  
-  // Add required fields with correct values
-  auctionData.append('itemCondition', mappedCondition);
-  auctionData.append('startBid', startBid ? startBid.toString() : '0');
-  
-  // Set minimum bid if not provided
-  if (!auctionData.has('minBid')) {
-    const startingValue = Number(startBid || 0);
-    auctionData.append('minBid', Math.max(1, Math.round(startingValue * 0.05)).toString());
-  }
-  
-  // Set auction duration if not provided
-  if (!auctionData.has('auctionDuration')) {
-    auctionData.append('auctionDuration', '7'); // Default 7 days
-  }
-  
-  // Calculate and ensure end date is set properly
-  const auctionDuration = Number(auctionData.get('auctionDuration') || 7);
+  // Calculate end date
+  const duration = Number(formObject.auctionDuration || 7);
   const endDate = new Date();
-  endDate.setDate(endDate.getDate() + auctionDuration);
+  endDate.setDate(endDate.getDate() + duration);
   
-  // Remove any existing endDate to avoid duplicates
-  if (auctionData.has('endDate')) {
-    auctionData.delete('endDate');
+  // Create a structured payload that matches the backend schema exactly
+  const payload = new FormData();
+  
+  // Add required fields with exact names expected by backend
+  payload.append('title', formObject.title || '');
+  payload.append('description', formObject.description || '');
+  payload.append('category', formObject.category || '');
+  payload.append('itemCondition', conditionMap[formObject.condition] || 'new');
+  payload.append('startBid', formObject.startingBid || '0');
+  payload.append('minBid', formObject.minBid || '1');
+  payload.append('auctionDuration', String(duration));
+  payload.append('endDate', endDate.toISOString());
+  
+  // Add optional fields
+  if (formObject.reservePrice) {
+    payload.append('reservePrice', formObject.reservePrice);
   }
   
-  // Add the endDate in ISO format
-  const endDateString = endDate.toISOString();
-  auctionData.append('endDate', endDateString);
-  
-  // Log what we're sending to help debug
-  console.log('Sending auction data:');
-  console.log('- endDate:', endDateString);
-  console.log('- itemCondition:', mappedCondition);
-  console.log('- startBid:', auctionData.get('startBid'));
-  console.log('- minBid:', auctionData.get('minBid'));
-  console.log('- auctionDuration:', auctionData.get('auctionDuration'));
-  
-  // Create a new FormData to ensure proper data structure
-  const apiFormData = new FormData();
-  
-  // Copy all fields from the original FormData
-  for (const [key, value] of auctionData.entries()) {
-    apiFormData.append(key, value);
+  // Add shipping options
+  if (formObject.shippingOptions) {
+    try {
+      const shippingOptions = typeof formObject.shippingOptions === 'string' 
+        ? JSON.parse(formObject.shippingOptions) 
+        : formObject.shippingOptions;
+      
+      payload.append('shippingOptions', JSON.stringify(shippingOptions));
+    } catch (e) {
+      console.error('Error parsing shipping options:', e);
+    }
   }
+  
+  // Add images
+  if (images && images.length > 0) {
+    images.forEach(image => {
+      payload.append('images', image);
+    });
+  }
+  
+  // Log the exact payload we're sending
+  console.log('Auction payload:');
+  console.log('- title:', payload.get('title'));
+  console.log('- description:', payload.get('description')?.toString().substring(0, 30) + '...');
+  console.log('- category:', payload.get('category'));
+  console.log('- itemCondition:', payload.get('itemCondition'));
+  console.log('- startBid:', payload.get('startBid'));
+  console.log('- minBid:', payload.get('minBid'));
+  console.log('- auctionDuration:', payload.get('auctionDuration'));
+  console.log('- endDate:', payload.get('endDate'));
+  console.log('- images count:', images.length);
   
   try {
-    const response = await api.post('/items/create', apiFormData, {
+    // Send the request with the properly structured payload
+    const response = await api.post('/items/create', payload, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
+    
+    console.log('Auction created successfully:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error creating auction:', error);
-    
-    // Log detailed error info if available
-    if (error instanceof Error) {
-      // For standard Error objects
-      const errorWithResponse = error as any;
-      if (errorWithResponse.response && errorWithResponse.response.data) {
-        console.error('Error details:', JSON.stringify(errorWithResponse.response.data, null, 2));
-      }
-    }
     
     throw error;
   }

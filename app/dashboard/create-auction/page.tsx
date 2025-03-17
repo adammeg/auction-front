@@ -25,23 +25,18 @@ export default function CreateAuctionPage() {
   const [categories, setCategories] = useState<any[]>([])
   const [formData, setFormData] = useState({
     title: '',
-    category: '',
     description: '',
-    condition: '',
+    category: '',
+    condition: 'new',
     startingBid: '',
     reservePrice: '',
     auctionDuration: '7',
-    minBid: '',
+    minBid: '1',
     shippingOptions: {
       domestic: false,
       international: false,
-      local: false
-    },
-    paymentMethods: {
-      card: true,
-      paypal: true,
-      bank: false
-    },
+      pickup: false
+    }
   })
 
   const router = useRouter()
@@ -124,14 +119,22 @@ export default function CreateAuctionPage() {
       // Create FormData object for file upload
       const auctionFormData = new FormData()
 
-      // Add all form fields
-      Object.entries(formData).forEach(([key, value]) => {
-        if (typeof value === 'object') {
-          auctionFormData.append(key, JSON.stringify(value))
-        } else {
-          auctionFormData.append(key, value)
-        }
-      })
+      // Add all form fields with exact names expected by backend
+      auctionFormData.append('title', formData.title)
+      auctionFormData.append('description', formData.description)
+      auctionFormData.append('category', formData.category)
+      auctionFormData.append('condition', formData.condition)
+      auctionFormData.append('startingBid', formData.startingBid)
+
+      if (formData.reservePrice) {
+        auctionFormData.append('reservePrice', formData.reservePrice)
+      }
+
+      auctionFormData.append('minBid', formData.minBid)
+      auctionFormData.append('auctionDuration', formData.auctionDuration)
+
+      // Add shipping options
+      auctionFormData.append('shippingOptions', JSON.stringify(formData.shippingOptions))
 
       // Add images
       images.forEach(image => {
@@ -149,9 +152,12 @@ export default function CreateAuctionPage() {
       router.push(`/auctions/${response._id}`)
     } catch (error) {
       console.error('Error creating auction:', error)
+
+      let errorMessage = "Un problème est survenu. Veuillez réessayer."
+
       toast({
         title: "Erreur lors de la création de l'enchère",
-        description: "Un problème est survenu. Veuillez réessayer.",
+        description: errorMessage,
         variant: "destructive",
       })
     } finally {
@@ -235,7 +241,7 @@ export default function CreateAuctionPage() {
 
                 <div className="grid gap-3">
                   <Label>État de l'Article</Label>
-                  <Select
+                  <Select 
                     value={formData.condition}
                     onValueChange={(value) => handleSelectChange('condition', value)}
                     required
