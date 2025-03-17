@@ -13,7 +13,7 @@ export interface Category {
 export const getCategories = async (): Promise<Category[]> => {
   console.log('Fetching categories');
   try {
-    const response = await api.get('/api/categories/all');
+    const response = await api.get('/categories/all');
     console.log('Categories response:', response.data);
     
     // Check if the response has a data property
@@ -32,7 +32,7 @@ export const getCategories = async (): Promise<Category[]> => {
 // Get category by ID
 export const getCategoryById = async (id: string): Promise<Category> => {
   try {
-    const response = await api.get(`/api/categories/${id}`);
+    const response = await api.get(`/categories/${id}`);
     
     // Check if the response has a data property
     if (response.data && response.data.data) {
