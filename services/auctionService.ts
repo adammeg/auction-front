@@ -167,14 +167,31 @@ export const getUserListings = async (): Promise<any> => {
   }
 };
 
-// Create new auction - simplified version
+// Create new auction - fix validation issues
 export const createAuction = async (auctionData: FormData): Promise<Auction> => {
   // Map field names to match backend expectations
-  const itemCondition = auctionData.get('condition');
+  const condition = auctionData.get('condition');
   const startBid = auctionData.get('startingBid');
   
-  // Add required fields with either existing values or defaults
-  auctionData.append('itemCondition', itemCondition ? itemCondition.toString() : 'used');
+  // Map frontend condition values to backend's allowed enum values
+  const conditionMapping: {[key: string]: string} = {
+    'new': 'new',
+    'like_new': 'like_new',
+    'excellent': 'very_good', // Map 'excellent' to 'very_good'
+    'very_good': 'very_good',
+    'good': 'good',
+    'fair': 'fair',
+    'poor': 'poor',
+    'for_parts': 'for_parts'
+  };
+  
+  // Get mapped condition or fallback to 'good'
+  const mappedCondition = condition 
+    ? (conditionMapping[condition.toString()] || 'good') 
+    : 'good';
+  
+  // Add required fields with correct values
+  auctionData.append('itemCondition', mappedCondition);
   auctionData.append('startBid', startBid ? startBid.toString() : '0');
   
   // Set minimum bid if not provided
@@ -188,18 +205,44 @@ export const createAuction = async (auctionData: FormData): Promise<Auction> => 
     auctionData.append('auctionDuration', '7'); // Default 7 days
   }
   
-  // Calculate end date
+  // Calculate and ensure end date is set properly
   const auctionDuration = Number(auctionData.get('auctionDuration') || 7);
   const endDate = new Date();
   endDate.setDate(endDate.getDate() + auctionDuration);
+  
+  // Remove any existing endDate to avoid duplicates
+  if (auctionData.has('endDate')) {
+    auctionData.delete('endDate');
+  }
+  
+  // Add the endDate in ISO format
   auctionData.append('endDate', endDate.toISOString());
   
-  const response = await api.post('/items/create', auctionData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
-    },
-  });
-  return response.data;
+  // Log what we're sending to help debug
+  console.log('Sending auction data with endDate:', endDate.toISOString());
+  console.log('Sending auction data with itemCondition:', mappedCondition);
+  
+  try {
+    const response = await api.post('/items/create', auctionData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error creating auction:', error);
+    
+    // Log detailed error info if available
+    if (error instanceof Error) {
+      // For standard Error objects
+      const errorWithResponse = error as any;
+      if (errorWithResponse.response && errorWithResponse.response.data) {
+        console.error('Error details:', errorWithResponse.response.data);
+      }
+    }
+    
+    throw error;
+  }
 };
 
 // Place bid on auction
@@ -251,18 +294,23 @@ export const getRelatedAuctions = async (
 export const getUserDashboardStats = async (): Promise<any> => {
   console.log('Fetching user dashboard stats');
   try {
+    console.log('Making API request to /users/dashboard-stats');
     const response = await api.get('/users/dashboard-stats');
-    console.log('Dashboard stats response:', response.data);
+    console.log('Dashboard stats response status:', response.status);
+    console.log('Dashboard stats response data:', JSON.stringify(response.data, null, 2));
     
     // Handle different response formats
     if (response.data && response.data.data) {
+      console.log('Returning nested data.data property');
       return response.data.data;
     }
     
+    console.log('Returning direct response data');
     return response.data;
   } catch (error) {
     console.error('Error fetching user dashboard stats:', error);
-    // Return default stats as fallback for when the backend fails
+    
+    // Return default stats as fallback
     return {
       activeAuctions: 0,
       completedAuctions: 0,

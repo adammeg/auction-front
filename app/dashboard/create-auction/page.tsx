@@ -31,7 +31,7 @@ export default function CreateAuctionPage() {
     startingBid: '',
     reservePrice: '',
     auctionDuration: '7',
-    minBid: '1',
+    minBid: '',
     shippingOptions: {
       domestic: false,
       international: false,
@@ -240,16 +240,17 @@ export default function CreateAuctionPage() {
                     onValueChange={(value) => handleSelectChange('condition', value)}
                     required
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="condition">
                       <SelectValue placeholder="Sélectionnez l'état" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="new">Neuf</SelectItem>
-                      <SelectItem value="like-new">Comme Neuf</SelectItem>
-                      <SelectItem value="excellent">Excellent</SelectItem>
-                      <SelectItem value="good">Bon</SelectItem>
-                      <SelectItem value="fair">Correct</SelectItem>
-                      <SelectItem value="poor">Mauvais</SelectItem>
+                      <SelectItem value="like_new">Comme neuf</SelectItem>
+                      <SelectItem value="very_good">Très bon état</SelectItem>
+                      <SelectItem value="good">Bon état</SelectItem>
+                      <SelectItem value="fair">État acceptable</SelectItem>
+                      <SelectItem value="poor">État médiocre</SelectItem>
+                      <SelectItem value="for_parts">Pour pièces détachées</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -396,9 +397,6 @@ export default function CreateAuctionPage() {
             <div className="flex gap-4">
               <Button type="submit" size="lg" disabled={isSubmitting}>
                 {isSubmitting ? "Création en cours..." : "Créer l'Enchère"}
-              </Button>
-              <Button type="button" variant="outline" size="lg">
-                Enregistrer comme Brouillon
               </Button>
             </div>
           </form>
